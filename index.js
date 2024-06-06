@@ -88,6 +88,7 @@ async function run() {
           date: item.date,
           report: item.report,
           slots: item.slots,
+          price: item.price,
           // image: item.image
         },
       };
@@ -197,6 +198,29 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/user/block/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: "block",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+    app.patch("/user/active/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: "active",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     // Admin section=======================================
 
     // banner get----------
@@ -245,6 +269,43 @@ async function run() {
     app.post("/appointments", async (req, res) => {
       const item = req.body;
       const result = await appointmentsCollection.insertOne(item);
+      res.send(result);
+    });
+
+    // for all reservation appointment for admin dashboard-----------
+    app.get("/appointments", async (req, res) => {
+      const result = await appointmentsCollection.find().toArray();
+      res.send(result);
+    });
+    // for report update-------------
+    //get single data--------------
+    app.get("/appointments/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await appointmentsCollection.findOne(query);
+      res.send(result);
+    });
+    //report update and delivered----------
+    app.patch("/appointments/:id", async (req, res) => {
+      const reportItem = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          report: reportItem.report,
+          reportLink: reportItem.reportLink,
+          
+        },
+      };
+      const result = await appointmentsCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+    
+    // for cancel reservation------------
+     app.delete("/appointments/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await appointmentsCollection.deleteOne(query);
       res.send(result);
     });
 
