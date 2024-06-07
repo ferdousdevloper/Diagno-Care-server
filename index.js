@@ -220,6 +220,18 @@ async function run() {
       const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+    //Find block------------------------
+    // Find admin----------------------------
+    app.get("/users/block/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let block = false;
+      if (user) {
+        block = user?.status === "block";
+      }
+      res.send({ block });
+    });
 
     // Admin section=======================================
 
