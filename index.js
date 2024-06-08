@@ -221,7 +221,7 @@ async function run() {
       res.send(result);
     });
     //Find block------------------------
-    // Find admin----------------------------
+    // Find block----------------------------
     app.get("/users/block/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
@@ -289,6 +289,10 @@ async function run() {
       const result = await appointmentsCollection.find().toArray();
       res.send(result);
     });
+    app.get("/appointments", async (req, res) => {
+      const result = await appointmentsCollection.find().toArray();
+      res.send(result);
+    });
     // for report update-------------
     //get single data--------------
     app.get("/appointments/:id", async (req, res) => {
@@ -318,6 +322,28 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await appointmentsCollection.deleteOne(query);
+      res.send(result);
+    });
+//for normal user dashboard====================================
+    //find single user data for test result------------------------
+    app.get("/appointments/report/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let delivered = false;
+      if (user) {
+        delivered = user?.report === "delivered";
+      }
+      res.send({ delivered });
+    });
+
+    app.get("/appointment/:email", async (req, res) => {
+      //const tokenEmail = req.user.email;
+      const email = req.params.email;
+      const result = await appointmentsCollection
+        .find({ 
+          email: req.params.email })
+        .toArray();
       res.send(result);
     });
 
