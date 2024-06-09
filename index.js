@@ -286,7 +286,8 @@ async function run() {
 
     // for all reservation appointment for admin dashboard-----------
     app.get("/appointments", async (req, res) => {
-      const result = await appointmentsCollection.find().toArray();
+      const result = await appointmentsCollection.find()
+      .toArray();
       res.send(result);
     });
     app.get("/appointments", async (req, res) => {
