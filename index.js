@@ -11,7 +11,7 @@ const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://localhost:5174",
-    //   "https://volunteer-link-f176e.web.app",
+    "https://diagnocare-48d76.web.app"
   ],
   // credentials: true,
   // optionSuccessStatus: 200,
@@ -297,7 +297,7 @@ async function run() {
 
     //banner delete---------------------
 
-    app.delete("/banner/:id", async (req, res) => {
+    app.delete("/banner/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await bannerCollection.deleteOne(query);
@@ -324,7 +324,7 @@ async function run() {
     });
     // Appointments related api=============================
     // add appointment by user--------------------------
-    app.post("/appointments", async (req, res) => {
+    app.post("/appointments", verifyToken, async (req, res) => {
       const item = req.body;
       const result = await appointmentsCollection.insertOne(item);
       res.send(result);
