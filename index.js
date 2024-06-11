@@ -341,6 +341,7 @@ async function run() {
     });
     // for report update-------------
     //get single data--------------
+    
     app.get("/appointments/:id",  async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
