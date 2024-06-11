@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-//const jwt = require('jsonwebtoken')
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const app = express();
@@ -44,6 +44,49 @@ async function run() {
       .db("diagnoCareDB")
       .collection("appointments");
 
+      const recommendationsCollection = client.db("diagnoCareDB").collection("recommendations");
+
+    // jwt related api
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
+
+
+    // middlewares 
+    const verifyToken = (req, res, next) => {
+      // console.log('inside verify token', req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      console.log({token});
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          console.log(err);
+          return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next();
+      })
+    }
+    
+
+    // use verify admin after verifyToken
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
     // banner section--------------------------------
     app.get("/banner", async (req, res) => {
       const result = await bannerCollection.find({ status: "true" }).toArray();
@@ -58,7 +101,7 @@ async function run() {
 
     //All tests ---------------------------------------
     //add test
-    app.post("/allTests", async (req, res) => {
+    app.post("/allTests", verifyToken, verifyAdmin, async (req, res) => {
       const item = req.body;
       const result = await allTestsCollection.insertOne(item);
       res.send(result);
@@ -69,7 +112,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/allTests/:id", async (req, res) => {
+    app.delete("/allTests/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await allTestsCollection.deleteOne(query);
@@ -77,7 +120,7 @@ async function run() {
     });
 
     //update all test--------
-    app.patch("/allTests/:id", async (req, res) => {
+    app.patch("/allTests/:id", verifyToken, verifyAdmin, async (req, res) => {
       const item = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -131,7 +174,7 @@ async function run() {
       res.send(result);
     });
     // Get all users for admin dashboard-------------------
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -146,7 +189,7 @@ async function run() {
     });
 
     //Update single user profile/ data---------------
-    app.patch("/users/:email", async (req, res) => {
+    app.patch("/users/:email", verifyToken, verifyAdmin, async (req, res) => {
       const item = req.body;
       const email = req.params.email;
       const filter = { email: email };
@@ -166,8 +209,11 @@ async function run() {
     });
 
     // Find admin----------------------------
-    app.get("/user/admin/:email", async (req, res) => {
+    app.get("/user/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
       const query = { email: email };
       const user = await userCollection.findOne(query);
       let admin = false;
@@ -177,7 +223,7 @@ async function run() {
       res.send({ admin });
     });
     // delete user for admin dashboard----------------
-    app.delete("/user/:id", async (req, res) => {
+    app.delete("/user/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await userCollection.deleteOne(query);
@@ -186,7 +232,7 @@ async function run() {
 
     // Make normal user to admin for admin dashboard----------------
 
-    app.patch("/user/admin/:id", async (req, res) => {
+    app.patch("/user/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -198,7 +244,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/user/block/:id", async (req, res) => {
+    app.patch("/user/block/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -209,7 +255,7 @@ async function run() {
       const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
-    app.patch("/user/active/:id", async (req, res) => {
+    app.patch("/user/active/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -286,8 +332,7 @@ async function run() {
 
     // for all reservation appointment for admin dashboard-----------
     app.get("/appointments", async (req, res) => {
-      const result = await appointmentsCollection.find()
-      .toArray();
+      const result = await appointmentsCollection.find().toArray();
       res.send(result);
     });
     app.get("/appointments", async (req, res) => {
@@ -296,7 +341,7 @@ async function run() {
     });
     // for report update-------------
     //get single data--------------
-    app.get("/appointments/:id", async (req, res) => {
+    app.get("/appointments/:id",  async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await appointmentsCollection.findOne(query);
@@ -311,21 +356,20 @@ async function run() {
         $set: {
           report: reportItem.report,
           reportLink: reportItem.reportLink,
-          
         },
       };
       const result = await appointmentsCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
-    
+
     // for cancel reservation------------
-     app.delete("/appointments/:id", async (req, res) => {
+    app.delete("/appointments/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await appointmentsCollection.deleteOne(query);
       res.send(result);
     });
-//for normal user dashboard====================================
+    //for normal user dashboard====================================
     //find single user data for test result------------------------
     app.get("/appointments/report/:email", async (req, res) => {
       const email = req.params.email;
@@ -342,9 +386,16 @@ async function run() {
       //const tokenEmail = req.user.email;
       const email = req.params.email;
       const result = await appointmentsCollection
-        .find({ 
-          email: req.params.email })
+        .find({
+          email: req.params.email,
+        })
         .toArray();
+      res.send(result);
+    });
+
+    //Recommendations==============================================
+    app.get("/recommendations", async (req, res) => {
+      const result = await recommendationsCollection.find().toArray();
       res.send(result);
     });
 
