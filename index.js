@@ -339,9 +339,10 @@ async function run() {
       const result = await appointmentsCollection.find().toArray();
       res.send(result);
     });
+    
     // for report update-------------
     //get single data--------------
-    
+
     app.get("/appointments/:id",  async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
